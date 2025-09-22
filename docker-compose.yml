@@ -28,10 +28,10 @@ services:
     image: victoriametrics/victoria-metrics:latest
     container_name: victoria-metrics
     command:
-      - "--promscrape.config=/etc/victoria-metrics/scrape.yml"
+      - "--promscrape.config=/etc/victoria-metrics/scrape.yaml"
     volumes:
       - victoria_data:/victoria-metrics-data
-      - ./victoria-metrics/scrape.yml:/etc/victoria-metrics/scrape.yml:ro
+      - ./victoria-metrics/scrape.yaml:/etc/victoria-metrics/scrape.yaml:ro
     restart: unless-stopped
     networks:
       - monitoring
@@ -40,10 +40,10 @@ services:
     image: prom/node-exporter:latest
     container_name: node-exporter
     command:
-      - "--web.listen-address=127.0.0.1:9100"
-    pid: "host"
-    network_mode: "host"
+      - "--web.listen-address=:9100"
     restart: unless-stopped
+    networks:
+      - monitoring
 
   grafana:
     image: grafana/grafana:latest
@@ -52,7 +52,7 @@ services:
       - GF_SECURITY_ADMIN_USER=${GRAFANA_ADMIN_USER}
       - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_ADMIN_PASSWORD}
     ports:
-      - "127.0.0.1:3000:3000"
+      - "3000:3000"
     volumes:
       - grafana_data:/var/lib/grafana
       - ./docker/grafana/provisioning:/etc/grafana/provisioning
