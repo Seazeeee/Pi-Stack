@@ -1,0 +1,67 @@
+networks:
+  monitoring:
+    driver: bridge
+
+# My Services
+services:
+  bible-bot:
+    build: ../bible-bot/
+    container_name: bible-bot
+    volumes:
+      - ../bible-bot/data/:/app/data
+    env_file:
+      - ../bible-bot/.env
+    restart: unless-stopped
+
+  mtg-pipeline:
+    build: ../mtg/
+    container_name: mtg-pipeline
+    volumes:
+      - ../mtg/database:/app/database
+      - ../mtg/src/dbt_project/profiles.yml:/home/botuser/.dbt/profiles.yml
+    env_file:
+      - ../mtg/.env
+    restart: unless-stopped
+
+  # Monitoring Stack
+  victoria-metrics:
+    image: victoriametrics/victoria-metrics:latest
+    container_name: victoria-metrics
+    command:
+      - "--promscrape.config=/etc/victoria-metrics/scrape.yml"
+    volumes:
+      - victoria_data:/victoria-metrics-data
+      - ./victoria-metrics/scrape.yml:/etc/victoria-metrics/scrape.yml:ro
+    restart: unless-stopped
+    networks:
+      - monitoring
+
+  node-exporter:
+    image: prom/node-exporter:latest
+    container_name: node-exporter
+    command:
+      - "--web.listen-address=127.0.0.1:9100"
+    pid: "host"
+    network_mode: "host"
+    restart: unless-stopped
+
+  grafana:
+    image: grafana/grafana:latest
+    container_name: grafana
+    environment:
+      - GF_SECURITY_ADMIN_USER=${GRAFANA_ADMIN_USER}
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_ADMIN_PASSWORD}
+    ports:
+      - "127.0.0.1:3000:3000"
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./docker/grafana/provisioning:/etc/grafana/provisioning
+    depends_on:
+      - victoria-metrics
+    restart: unless-stopped
+    networks:
+      - monitoring
+
+volumes:
+  victoria_data:
+  grafana_data:
